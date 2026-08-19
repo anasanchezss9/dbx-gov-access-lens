@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Access Lens — Visão Centralizada de Acessos</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --s1: #2a78d6;
+    --s2: #eb6834;
+    --s3: #1baf7a;
+    --warn: #fab219;
+    --crit: #d03b3b;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page: #0d0d0d; --ink: #fff; --ink-2: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+      --border: rgba(255,255,255,0.10);
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --page: #0d0d0d; --ink: #fff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--surface-1);
+  }
+  h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .tagline { color: var(--ink-2); font-size: 13px; }
+  .spacer { margin-left: auto; }
+  .btn {
+    font: inherit; font-size: 12.5px; padding: 6px 12px; cursor: pointer;
+    border: 1px solid var(--axis); border-radius: 7px;
+    background: var(--surface-1); color: var(--ink-2);
+  }
+  .btn:hover { color: var(--ink); }
+
+  main { padding: 22px 28px 70px; max-width: 1360px; margin: 0 auto; }
+
+  /* ---------- form: grid alinhado ---------- */
+  .panel {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .form {
+    display: grid; gap: 14px 16px; align-items: end;
+    grid-template-columns: minmax(240px, 2fr) minmax(130px, 1fr) minmax(180px, 1.4fr) auto;
+  }
+  @media (max-width: 860px) { .form { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; min-width: 0; }
+  .field > label {
+    font-size: 12px; color: var(--ink-2); margin-bottom: 6px; font-weight: 550;
+  }
+  .field > input, .field > select {
+    font: inherit; font-size: 13px; height: 38px; padding: 0 10px; width: 100%;
+    border: 1px solid var(--axis); border-radius: 7px;
+    background: var(--surface-1); color: var(--ink);
+  }
+  .field > input:focus, .field > select:focus {
+    outline: 2px solid color-mix(in oklab, var(--s1) 45%, transparent); outline-offset: -1px;
+  }
+  .go {
+    height: 38px; padding: 0 20px; font: inherit; font-size: 13px; font-weight: 600;
+    background: var(--s1); color: #fff; border: 1px solid var(--s1);
+    border-radius: 7px; cursor: pointer; white-space: nowrap;
+  }
+  .go:disabled { opacity: .55; cursor: progress; }
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+  .form-foot { grid-column: 1 / -1; margin: 0; }
+
+  /* ---------- tiles ---------- */
+  .tiles {
+    display: grid; gap: 12px; margin: 20px 0;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 13px 15px;
+  }
+  .tile .k {
+    font-size: 11px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .045em; line-height: 1.35;
+  }
+  .tile .v { font-size: 26px; font-weight: 640; margin-top: 4px; letter-spacing: -0.02em; }
+
+  /* ---------- breadcrumb + tabs ---------- */
+  .crumb {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 14px; font-size: 13px; color: var(--ink-2);
+  }
+  .crumb button {
+    font: inherit; font-size: 13px; background: none; border: none; padding: 0;
+    color: var(--s1); cursor: pointer; text-decoration: underline;
+  }
+  .tabs {
+    display: flex; gap: 2px; margin-bottom: 16px;
+    border-bottom: 1px solid var(--grid); flex-wrap: wrap;
+  }
+  .tab {
+    font: inherit; font-size: 13px; padding: 9px 15px; cursor: pointer;
+    border: none; background: none; color: var(--ink-2);
+    border-bottom: 2px solid transparent; border-radius: 0;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--s1); font-weight: 620; }
+
+  /* ---------- cards de container (nível 1) ---------- */
+  .cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); }
+  .card {
+    text-align: left; font: inherit; cursor: pointer;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 13px 15px; color: var(--ink);
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .card:hover { border-color: var(--s1); background: color-mix(in oklab, var(--s1) 4%, var(--surface-1)); }
+  .card-top { display: flex; align-items: baseline; gap: 10px; }
+  .card-name {
+    font-weight: 600; font-size: 13.5px; word-break: break-all; line-height: 1.35;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .card-n {
+    margin-left: auto; font-size: 17px; font-weight: 650;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .card-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .card-cta { font-size: 11.5px; color: var(--muted); }
+
+  /* ---------- tabela ---------- */
+  .scroll {
+    max-height: 560px; overflow: auto;
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th {
+    text-align: left; padding: 9px 11px; font-size: 12px; font-weight: 600;
+    color: var(--ink-2); background: var(--surface-1); white-space: nowrap;
+    border-bottom: 1px solid var(--axis); position: sticky; top: 0; z-index: 1;
+  }
+  td { padding: 8px 11px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  tbody tr:hover td { background: color-mix(in oklab, var(--s1) 5%, transparent); }
+  .col-type { width: 8.5em; }
+  .col-priv { width: 10.5em; }
+  .col-lvl  { width: 13em; }
+  .col-via  { width: 12.5em; }
+  .obj { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; word-break: break-all; }
+
+  /* ---------- pills ---------- */
+  .pill {
+    display: inline-flex; align-items: flex-start; gap: 5px; padding: 2px 8px;
+    border-radius: 12px; font-size: 11.5px; font-weight: 550;
+    /* pills como "herda de /serving-endpoints" sao longas: quebram em vez de vazar */
+    max-width: 100%; overflow-wrap: anywhere; text-align: left;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; margin-top: 5px; }
+  .p-direct { background: color-mix(in oklab, var(--s1) 13%, transparent); }
+  .p-group  { background: color-mix(in oklab, var(--s2) 15%, transparent); }
+  .p-own    { background: color-mix(in oklab, var(--s3) 15%, transparent); }
+  .p-inh    { background: color-mix(in oklab, var(--warn) 24%, transparent); }
+  .p-ind    { background: color-mix(in oklab, var(--crit) 14%, transparent); }
+  .pill { color: var(--ink); }
+
+  .legend {
+    display: flex; gap: 15px; flex-wrap: wrap;
+    font-size: 12px; color: var(--ink-2); margin: 0 0 16px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .msg { padding: 11px 14px; border-radius: 8px; font-size: 13px; margin: 14px 0 0; }
+  .msg.err { background: color-mix(in oklab, var(--crit) 12%, transparent);
+             border: 1px solid color-mix(in oklab, var(--crit) 40%, transparent); }
+  .msg.info { background: color-mix(in oklab, var(--s1) 8%, transparent);
+              border: 1px solid var(--border); color: var(--ink-2); }
+  .msg code { font-size: 12px; }
+  .empty { padding: 34px; text-align: center; color: var(--muted); }
+  details { margin-top: 16px; }
+  summary { cursor: pointer; color: var(--ink-2); font-size: 12.5px; }
+  details ul { margin: 10px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 12.5px; }
+  details li { margin-bottom: 5px; }
+  .spin {
+    display: inline-block; width: 13px; height: 13px; vertical-align: -2px;
+    border: 2px solid var(--axis); border-top-color: var(--s1);
+    border-radius: 50%; animation: r .7s linear infinite;
+  }
+  @keyframes r { to { transform: rotate(360deg); } }
+  .filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .mini {
+    font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer;
+    border: 1px solid var(--s1); border-radius: 7px;
+    background: color-mix(in oklab, var(--s1) 10%, transparent); color: var(--ink);
+  }
+  .mini:hover { background: color-mix(in oklab, var(--s1) 20%, transparent); }
+  .mini.alt { border-color: var(--axis); background: none; color: var(--ink-2); }
+  .mini.alt:hover { border-color: var(--s1); color: var(--ink); }
+  .msg.warnbox {
+    background: color-mix(in oklab, var(--warn) 16%, transparent);
+    border: 1px solid color-mix(in oklab, var(--warn) 45%, transparent);
+  }
+  .secttl {
+    font-size: 13px; font-weight: 650; margin: 18px 0 8px;
+    color: var(--ink); letter-spacing: -0.005em;
+  }
+  .treewrap {
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+    max-height: 520px; overflow: auto;
+  }
+  .treerow {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    padding: 4px 0; border-bottom: 1px solid var(--grid);
+  }
+  .treeline { color: var(--muted); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .linkish {
+    font: inherit; font-size: 13px; background: none; border: none; padding: 0;
+    color: var(--s1); cursor: pointer; text-align: left; text-decoration: underline;
+    text-underline-offset: 2px; overflow-wrap: anywhere;
+  }
+  .linkish:hover { color: var(--ink); }
+  .filter-row input {
+    font: inherit; font-size: 13px; height: 34px; padding: 0 10px; min-width: 220px;
+    border: 1px solid var(--axis); border-radius: 7px;
+    background: var(--surface-1); color: var(--ink);
+  }
+  .count-note { font-size: 12px; color: var(--muted); }
+
+  /* ---------- Genie chat ---------- */
+  .genie-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: color-mix(in oklab, var(--ink) 32%, transparent);
+    display: flex; justify-content: flex-end;
+  }
+  .genie-panel {
+    width: min(560px, 100%); height: 100%; background: var(--page);
+    border-left: 1px solid var(--border); display: flex; flex-direction: column;
+    box-shadow: -18px 0 40px rgba(0,0,0,.18);
+  }
+  .genie-head {
+    display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px;
+    border-bottom: 1px solid var(--border); background: var(--surface-1);
+  }
+  .genie-head .btn { margin-left: auto; }
+  .genie-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+  .genie-body { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .genie-intro p { margin: 0 0 10px; color: var(--ink-2); font-size: 13px; }
+  .genie-chips { display: flex; flex-direction: column; gap: 8px; }
+  .genie-chip {
+    text-align: left; font: inherit; font-size: 12.5px; cursor: pointer;
+    border: 1px solid var(--axis); border-radius: 8px; padding: 9px 12px;
+    background: var(--surface-1); color: var(--ink-2);
+  }
+  .genie-chip:hover { border-color: var(--s1); color: var(--ink); }
+  .bubble {
+    max-width: 92%; padding: 11px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;
+  }
+  .bubble.user { align-self: flex-end; background: var(--s1); color: #fff; border-bottom-right-radius: 4px; }
+  .bubble.ai {
+    align-self: flex-start; background: var(--surface-1); border: 1px solid var(--border);
+    border-bottom-left-radius: 4px; overflow-wrap: anywhere;
+  }
+  .bubble.ai pre {
+    margin: 10px 0 0; padding: 10px; border-radius: 8px; overflow-x: auto;
+    background: color-mix(in oklab, var(--ink) 6%, var(--surface-1));
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+  }
+  .bubble.ai table { font-size: 12px; margin-top: 10px; }
+  .bubble.ai .scroll { max-height: 260px; margin-top: 10px; }
+  .genie-foot {
+    display: flex; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--border);
+    background: var(--surface-1);
+  }
+  .genie-foot input {
+    flex: 1; font: inherit; font-size: 13px; height: 40px; padding: 0 12px;
+    border: 1px solid var(--axis); border-radius: 8px;
+    background: var(--surface-1); color: var(--ink);
+  }
+  .genie-foot input:focus { outline: 2px solid color-mix(in oklab, var(--s1) 45%, transparent); outline-offset: -1px; }
+  .genie-disclaimer { padding: 0 18px 12px; background: var(--surface-1); margin: 0; }
+  @media (max-width: 640px) { .genie-panel { width: 100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Access Lens</h1>
+  <span class="tagline">Governança de acessos com rastreabilidade de origem</span>
+  <span class="spacer"></span>
+  <button class="btn" id="geniebtn" hidden>✨ Perguntar à IA</button>
+  <button class="btn" id="theme">◐ tema</button>
+</header>
+
+<main>
+  <div class="panel">
+    <div class="form">
+      <div class="field">
+        <label for="principal">Usuário ou grupo</label>
+        <input id="principal" list="plist" placeholder="usuario@empresa.com ou nome do grupo">
+        <datalist id="plist"></datalist>
+      </div>
+      <div class="field">
+        <label for="kind">Buscar em</label>
+        <select id="kind">
+          <option value="users">Usuários</option>
+          <option value="groups">Grupos</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ws">Workspace</label>
+        <select id="ws"><option value="">carregando…</option></select>
+      </div>
+      <button class="go" id="run">Analisar acessos</button>
+      <div class="form-foot hint" id="mehint"></div>
+    </div>
+  </div>
+
+  <div id="out"></div>
+</main>
+
+<!-- Painel de chat com a Genie Space de governança -->
+<div id="genie" class="genie-overlay" hidden>
+  <div class="genie-panel">
+    <div class="genie-head">
+      <div>
+        <div class="genie-title">✨ Perguntar à IA sobre acessos e ambiente</div>
+        <div class="hint">Sala do Genie sobre as system tables — audit, linhagem, consumo e privilégios.</div>
+      </div>
+      <button class="btn" id="genieclose">✕</button>
+    </div>
+    <div class="genie-body" id="geniebody">
+      <div class="genie-intro">
+        <p>Pergunte em linguagem natural o que o app ainda não traz em tela. Exemplos:</p>
+        <div class="genie-chips" id="geniechips"></div>
+      </div>
+    </div>
+    <div class="genie-foot">
+      <input id="genieinput" placeholder="Ex: quem recebeu GRANT em produção nos últimos 30 dias?" autocomplete="off">
+      <button class="go" id="geniesend">Enviar</button>
+    </div>
+    <div class="hint genie-disclaimer" id="geniedisc"></div>
+  </div>
+</div>
+
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const state = { principal: "", overview: null, wsNote: "" };
+
+$("#theme").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : cur === "light" ? "dark"
+    : (matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+};
+
+async function api(path) {
+  const r = await fetch(path);
+  if (!r.ok) {
+    let m = await r.text();
+    try { m = JSON.parse(m).detail || m; } catch (_) {}
+    throw new Error(m.slice(0, 300));
+  }
+  return r.json();
+}
+
+(async () => {
+  try {
+    const me = await api("/api/me");
+    $("#principal").value = me.userName || "";
+    $("#mehint").textContent = "Você está logado como " + (me.userName || "—");
+  } catch (_) {}
+  try {
+    const w = await api("/api/workspaces");
+    state.wsNote = w.note || "";
+    state.currentWs = w.current_workspace_id;
+    $("#ws").innerHTML = w.workspaces.map(x =>
+      `<option value="${esc(x.id)}"${x.id === w.current_workspace_id ? " selected" : ""}>`
+      + `${esc(x.name)}${x.id === w.current_workspace_id ? " — publicado aqui" : ""}</option>`
+    ).join("");
+    $("#ws").title = w.note || "";
+  } catch (_) { $("#ws").innerHTML = '<option value="">atual</option>'; }
+})();
+
+// Escolher outro workspace: UC continua valendo (é do metastore), recursos não.
+const wsIsRemote = () => state.currentWs && $("#ws").value && $("#ws").value !== state.currentWs;
+const wsLabel = () => $("#ws").options[$("#ws").selectedIndex]?.textContent.replace(" — publicado aqui", "") || "atual";
+
+let tmr;
+$("#principal").addEventListener("input", e => {
+  clearTimeout(tmr);
+  const q = e.target.value.trim();
+  if (q.length < 2) return;
+  tmr = setTimeout(async () => {
+    try {
+      const d = await api(`/api/principals?kind=${$("#kind").value}&q=${encodeURIComponent(q)}`);
+      $("#plist").innerHTML = d.items.map(i => `<option value="${esc(i.name)}">`).join("");
+    } catch (_) {}
+  }, 280);
+});
+
+// ---------- pills ----------
+function viaPill(row) {
+  if (row.via === "Direto")
+    return `<span class="pill p-direct"><span class="dot" style="background:var(--s1)"></span>Direto</span>`;
+  const ind = row.group_type === "indirect";
+  return `<span class="pill ${ind ? "p-ind" : "p-group"}" title="${ind
+      ? "Vem de um grupo aninhado (directGroup=false)" : "Membro direto do grupo"}">`
+    + `<span class="dot" style="background:${ind ? "var(--crit)" : "var(--s2)"}"></span>`
+    + `${esc(row.via.replace("Grupo: ", ""))}${ind ? " (aninhado)" : ""}</span>`;
+}
+function lvlPill(v) {
+  const own = v === "No proprio objeto";
+  return `<span class="pill ${own ? "p-own" : "p-inh"}">`
+    + `<span class="dot" style="background:${own ? "var(--s3)" : "var(--warn)"}"></span>`
+    + (own ? "No objeto" : esc(v.replace("Herdado de ", "herda de "))) + `</span>`;
+}
+const LEGEND = `<div class="legend">
+  <span><span class="dot" style="background:var(--s1)"></span>Grant direto ao principal</span>
+  <span><span class="dot" style="background:var(--s2)"></span>Via grupo (membro direto)</span>
+  <span><span class="dot" style="background:var(--crit)"></span>Via grupo aninhado</span>
+  <span><span class="dot" style="background:var(--s3)"></span>Concedido no próprio objeto</span>
+  <span><span class="dot" style="background:var(--warn)"></span>Herdado do pai</span>
+</div>`;
+
+function spInfo(...labels) {
+  return labels.some(l => (l || "").includes("service principal"))
+    ? `<div class="msg info">Leitura via <b>service principal do app</b> — o consentimento OBO do
+       Databricks Apps só oferece o escopo <code>sql</code>, e a Permissions API não tem escopo OBO.
+       A visibilidade é a do service principal, não a sua.</div>` : "";
+}
+
+// ---------- nível 1 ----------
+function renderOverview(ov) {
+  state.overview = ov;
+  const gd = ov.groups.filter(g => g.type === "direct").length;
+  const gi = ov.groups.filter(g => g.type === "indirect").length;
+  const totalPrivs = ov.catalogs.reduce((a, c) => a + c.privileges, 0);
+
+  $("#out").innerHTML = `
+    <div class="tiles">
+      <div class="tile"><div class="k">Catálogos com acesso</div><div class="v">${ov.catalogs.length}</div></div>
+      <div class="tile"><div class="k">Privilégios UC</div><div class="v">${totalPrivs}</div></div>
+      <div class="tile"><div class="k">Grupos diretos</div><div class="v">${gd}</div></div>
+      <div class="tile"><div class="k">Grupos aninhados</div><div class="v">${gi}</div></div>
+      <div class="tile"><div class="k">Tipos de recurso</div><div class="v">${ov.resource_types.length}</div></div>
+    </div>
+    ${LEGEND}
+    <div class="panel">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true"  data-t="cat">Unity Catalog (${ov.catalogs.length})</button>
+        <button class="tab" role="tab" aria-selected="false" data-t="res">Recursos de workspace${wsIsRemote() ? "" : ` (${ov.resource_types.length})`}</button>
+        <button class="tab" role="tab" aria-selected="false" data-t="grp">Grupos (${ov.groups.length})</button>
+      </div>
+      <div id="pane"></div>
+      ${spInfo(ov.queried_as)}
+      <details><summary>Fontes de dados e limitações da plataforma</summary>
+        <div id="notes" class="hint">carregando…</div>
+      </details>
+    </div>`;
+
+  $("#out").querySelectorAll(".tab").forEach(t => t.onclick = () => {
+    $("#out").querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+    ({ cat: paneCatalogs, res: paneResources, grp: paneGroups })[t.dataset.t]();
+  });
+  paneCatalogs();
+  loadNotes();
+}
+
+async function loadNotes() {
+  try {
+    const n = await api("/api/scope-note");
+    $("#notes").innerHTML =
+      `<ul>${n.fontes.map(f => `<li><b>${esc(f)}</b></li>`).join("")}</ul>`
+      + `<ul>${n.limitacoes.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`
+      + (state.wsNote ? `<ul><li>${esc(state.wsNote)}</li></ul>` : "");
+  } catch (_) { $("#notes").textContent = ""; }
+}
+
+function paneCatalogs() {
+  const cats = state.overview.catalogs;
+  if (!cats.length) { $("#pane").innerHTML = `<div class="empty">Nenhum privilégio de Unity Catalog encontrado.</div>`; return; }
+  $("#pane").innerHTML = `
+    <div class="filter-row">
+      <input id="fcat" placeholder="Filtrar catálogo por nome…">
+      <span class="count-note" id="ccount"></span>
+    </div>
+    <div class="cards" id="catcards"></div>`;
+
+  const draw = (q = "") => {
+    const list = cats.filter(c => c.catalog.toLowerCase().includes(q.toLowerCase()));
+    $("#ccount").textContent = `${list.length} de ${cats.length} catálogos · clique para ver os assets`;
+    $("#catcards").innerHTML = list.slice(0, 300).map(c => `
+      <button class="card" data-cat="${esc(c.catalog)}">
+        <div class="card-top">
+          <span class="card-name">${esc(c.catalog)}</span>
+          <span class="card-n">${c.privileges}</span>
+        </div>
+        <div class="card-meta">
+          ${c.direct ? `<span class="pill p-direct"><span class="dot" style="background:var(--s1)"></span>Direto</span>` : ""}
+          ${c.via_groups.slice(0, 2).map(g => `<span class="pill p-group"><span class="dot" style="background:var(--s2)"></span>${esc(g)}</span>`).join("")}
+          ${c.via_groups.length > 2 ? `<span class="pill p-group">+${c.via_groups.length - 2}</span>` : ""}
+          ${c.has_nested ? `<span class="pill p-ind"><span class="dot" style="background:var(--crit)"></span>aninhado</span>` : ""}
+        </div>
+        <div class="card-cta">ver privilégios nos assets →</div>
+      </button>`).join("");
+    $("#catcards").querySelectorAll(".card").forEach(b => b.onclick = () => openCatalog(b.dataset.cat));
+  };
+  draw();
+  $("#fcat").oninput = e => draw(e.target.value);
+}
+
+function paneResources() {
+  const types = state.overview.resource_types;
+  $("#pane").innerHTML = `
+    <div class="filter-row">
+      <input id="fres" placeholder="Filtrar tipo de recurso…">
+      <span class="count-note">clique num tipo para varrer as permissões</span>
+    </div>
+    <div class="cards" id="rescards"></div>
+    <div class="hint">Escopo: workspace <b>${esc(wsLabel())}</b>. Permissões de recurso são
+      locais ao workspace; privilégios de Unity Catalog, não.</div>`;
+
+  if (wsIsRemote()) {
+    $("#pane").innerHTML = `<div class="msg info">
+      Você selecionou o workspace <b>${esc(wsLabel())}</b>, diferente daquele onde este app está
+      publicado. Os privilégios de <b>Unity Catalog</b> continuam válidos — são do metastore e
+      iguais em todos os workspaces da conta. Já as permissões de <b>clusters, jobs, warehouses,
+      Genie spaces e afins são locais</b>, e as credenciais do app não são aceitas em outro
+      workspace. Para auditá-las lá, publique uma instância do Access Lens nesse workspace.
+    </div>`;
+    return;
+  }
+
+  const draw = (q = "") => {
+    const list = types.filter(t => t.label.toLowerCase().includes(q.toLowerCase()));
+    $("#rescards").innerHTML = list.map(t => `
+      <div class="card" style="cursor:default">
+        <div class="card-top"><span class="card-name" style="font-family:inherit">${esc(t.label)}</span></div>
+        <div class="card-actions">
+          <button class="mini" data-res="${esc(t.key)}">o que ${esc(state.principal.split("@")[0])} acessa →</button>
+          <button class="mini alt" data-inv="${esc(t.key)}">inspecionar um objeto →</button>
+        </div>
+      </div>`).join("");
+    $("#rescards").querySelectorAll("[data-res]").forEach(b => b.onclick = () => openResource(b.dataset.res));
+    $("#rescards").querySelectorAll("[data-inv]").forEach(b => b.onclick = () => openObjectPicker(b.dataset.inv));
+  };
+  draw();
+  $("#fres").oninput = e => draw(e.target.value);
+}
+
+// ---------- visão inversa: escolher UM objeto ----------
+async function openObjectPicker(key) {
+  const label = state.overview.resource_types.find(t => t.key === key)?.label || key;
+  $("#pane").innerHTML = crumb(label) + `<div class="msg info"><span class="spin"></span> Listando objetos…</div>`;
+  $("#back").onclick = () => renderOverview(state.overview);
+  try {
+    const d = await api(`/api/resource/${encodeURIComponent(key)}/objects`);
+    $("#pane").innerHTML = crumb(label) + `
+      <div class="msg info">Escolha um objeto para ver <b>todos</b> que têm acesso a ele — e,
+        quando houver telemetria, quem realmente o usou.</div>
+      <div class="filter-row">
+        <input id="fobj" placeholder="Filtrar ${esc(label.toLowerCase())} por nome…">
+        <span class="count-note" id="ocount"></span>
+      </div>
+      <div class="cards" id="objcards"></div>`;
+    $("#back").onclick = () => renderOverview(state.overview);
+
+    const draw = (q = "") => {
+      const ql = q.toLowerCase();
+      const list = d.items.filter(i => !ql || i.name.toLowerCase().includes(ql));
+      $("#ocount").textContent = `${list.length} de ${d.total} objetos`;
+      $("#objcards").innerHTML = list.slice(0, 200).map(i => `
+        <button class="card" data-oid="${esc(i.id)}" data-oname="${esc(i.name)}">
+          <div class="card-top"><span class="card-name" style="font-family:inherit">${esc(i.name)}</span></div>
+          <div class="card-cta">quem tem acesso →</div>
+        </button>`).join("");
+      $("#objcards").querySelectorAll(".card").forEach(b =>
+        b.onclick = () => openObjectAccess(key, b.dataset.oid, b.dataset.oname, d.supports_usage));
+    };
+    draw();
+    $("#fobj").oninput = e => draw(e.target.value);
+  } catch (e) {
+    $("#pane").innerHTML = crumb(label) + `<div class="msg err">${esc(e.message)}</div>`;
+    $("#back").onclick = () => renderOverview(state.overview);
+  }
+}
+
+// ---------- quem acessa ESTE objeto (+ impacto) ----------
+async function openObjectAccess(key, oid, oname, supportsUsage) {
+  const label = state.overview.resource_types.find(t => t.key === key)?.label || key;
+  $("#pane").innerHTML = crumb(`${label} · ${oname}`)
+    + `<div class="msg info"><span class="spin"></span> Lendo a lista de acesso de <b>${esc(oname)}</b>…</div>`;
+  $("#back").onclick = () => openObjectPicker(key);
+  try {
+    const d = await api(`/api/resource/${encodeURIComponent(key)}/${encodeURIComponent(oid)}/who?name=${encodeURIComponent(oname)}`);
+    const kindPill = k => {
+      const map = { "grupo": ["p-group","var(--s2)"], "usuário": ["p-direct","var(--s1)"], "service principal": ["p-own","var(--s3)"] };
+      const [cls, color] = map[k] || ["p-direct","var(--s1)"];
+      return `<span class="pill ${cls}"><span class="dot" style="background:${color}"></span>${esc(k)}</span>`;
+    };
+    $("#pane").innerHTML = crumb(`${label} · ${oname}`) + `
+      <div class="tiles">
+        <div class="tile"><div class="k">Entradas de acesso</div><div class="v">${d.count}</div></div>
+        <div class="tile"><div class="k">Grupos</div><div class="v">${d.groups}</div></div>
+        <div class="tile"><div class="k">Usuários</div><div class="v">${d.users}</div></div>
+        <div class="tile"><div class="k">Service principals</div><div class="v">${d.service_principals}</div></div>
+      </div>
+      ${supportsUsage ? `<div class="filter-row"><button class="mini alt" id="btnimpact">
+        Ver quem realmente usou (impacto de remover) →</button></div>` : ""}
+      <div id="impactbox"></div>
+      <div class="filter-row">
+        <input id="fwho" placeholder="Filtrar por nome ou permissão…">
+        <span class="count-note" id="wcount"></span>
+      </div>
+      <div class="scroll"><table>
+        <thead><tr><th>Quem</th><th class="col-type">Tipo</th><th class="col-priv">Permissão</th><th class="col-lvl">Origem</th></tr></thead>
+        <tbody id="wbody"></tbody>
+      </table></div>
+      <div class="hint">Um grupo aqui pode significar muita gente — clique nele para ver os membros.</div>
+      ${spInfo(d.queried_as)}`;
+    $("#back").onclick = () => openObjectPicker(key);
+
+    const draw = (q = "") => {
+      const ql = q.toLowerCase();
+      const list = d.items.filter(i => !ql
+        || i.principal.toLowerCase().includes(ql)
+        || (i.permission || "").toLowerCase().includes(ql));
+      $("#wcount").textContent = `${list.length} de ${d.count} entradas`;
+      $("#wbody").innerHTML = list.map(i => `<tr>
+        <td>${i.kind === "grupo"
+              ? `<button class="linkish" data-grp="${esc(i.principal)}">${esc(i.principal)}</button>`
+              : `<button class="linkish" data-user="${esc(i.principal)}">${esc(i.principal)}</button>`}</td>
+        <td>${kindPill(i.kind)}</td>
+        <td>${esc(i.permission)}</td>
+        <td>${lvlPill(i.grant_level)}</td>
+      </tr>`).join("");
+      $("#wbody").querySelectorAll("[data-grp]").forEach(b => b.onclick = () => openGroup(b.dataset.grp));
+      $("#wbody").querySelectorAll("[data-user]").forEach(b => b.onclick = () => analyzePrincipal(b.dataset.user));
+    };
+    draw();
+    $("#fwho").oninput = e => draw(e.target.value);
+
+    if (supportsUsage) $("#btnimpact").onclick = async () => {
+      $("#impactbox").innerHTML = `<div class="msg info"><span class="spin"></span> Consultando uso real dos últimos 30 dias…</div>`;
+      try {
+        const im = await api(`/api/resource/${encodeURIComponent(key)}/${encodeURIComponent(oid)}/impact?days=30`);
+        $("#impactbox").innerHTML = `
+          <div class="msg ${im.active_principals ? "info" : "warnbox"}">
+            <b>Impacto de remover:</b> ${esc(im.verdict)}
+          </div>
+          ${im.items.length ? `<div class="scroll" style="max-height:260px"><table>
+            <thead><tr><th>Quem usou</th><th class="col-priv">${esc(im.unit)}</th><th class="col-lvl">Último uso</th></tr></thead>
+            <tbody>${im.items.slice(0,50).map(u => `<tr>
+              <td>${u.principal.includes("@")
+                    ? `<button class="linkish" data-user="${esc(u.principal)}">${esc(u.principal)}</button>`
+                    : `<span class="obj">${esc(u.principal)}</span>`}</td>
+              <td style="font-variant-numeric:tabular-nums">${esc(u.amount)}</td>
+              <td>${esc(u.last_use)}</td></tr>`).join("")}</tbody>
+          </table></div>
+          <div class="hint">Permissão ≠ uso: quem aparece aqui sente a remoção de imediato.
+            Quem tem permissão mas não aparece, provavelmente não.</div>` : ""}`;
+        $("#impactbox").querySelectorAll("[data-user]").forEach(b => b.onclick = () => analyzePrincipal(b.dataset.user));
+      } catch (e) {
+        $("#impactbox").innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+      }
+    };
+  } catch (e) {
+    $("#pane").innerHTML = crumb(oname) + `<div class="msg err">${esc(e.message)}</div>`;
+    $("#back").onclick = () => openObjectPicker(key);
+  }
+}
+
+function paneGroups() {
+  const gs = state.overview.groups;
+  if (!gs.length) { $("#pane").innerHTML = `<div class="empty">Este principal não pertence a nenhum grupo.</div>`; return; }
+  $("#pane").innerHTML = `
+    <div class="filter-row"><span class="count-note">${gs.length} grupos · clique para ver quem mais está dentro</span></div>
+    <div class="cards" id="grpcards">
+      ${gs.map(g => `
+        <button class="card" data-grp="${esc(g.name)}">
+          <div class="card-top"><span class="card-name" style="font-family:inherit">${esc(g.name)}</span></div>
+          <div class="card-meta">${viaPill({ via: "Grupo: " + g.name, group_type: g.type })}</div>
+          <div class="card-cta">ver membros →</div>
+        </button>`).join("")}
+    </div>`;
+  $("#grpcards").querySelectorAll(".card").forEach(b => b.onclick = () => openGroup(b.dataset.grp));
+}
+
+async function openGroup(name) {
+  $("#pane").innerHTML = crumb(name) + `<div class="msg info"><span class="spin"></span> Buscando membros de <b>${esc(name)}</b>…</div>`;
+  $("#back").onclick = () => renderOverview(state.overview);
+  try {
+    const d = await api(`/api/group/${encodeURIComponent(name)}/members`);
+    renderGroup(name, d);
+  } catch (e) {
+    $("#pane").innerHTML = crumb(name) + `<div class="msg err">${esc(e.message)}</div>`;
+    $("#back").onclick = () => renderOverview(state.overview);
+  }
+}
+
+function renderGroup(name, d) {
+  const t = d.totals;
+  const shown = d.users.length + d.service_principals.length + d.subgroups.length;
+  const capped = t.members > shown && !d.filtered;
+
+  $("#pane").innerHTML = crumb(name) + `
+    <div class="tiles">
+      <div class="tile"><div class="k">Membros</div><div class="v">${t.members}</div></div>
+      <div class="tile"><div class="k">Usuários</div><div class="v">${t.users}</div></div>
+      <div class="tile"><div class="k">Service principals</div><div class="v">${t.service_principals}</div></div>
+      <div class="tile"><div class="k">Subgrupos</div><div class="v">${t.subgroups}</div></div>
+    </div>
+    ${d.parents.length ? `<div class="hint" style="margin-bottom:10px">Este grupo está dentro de:
+      ${d.parents.map(p => `<button class="linkish" data-sub="${esc(p.name)}">${esc(p.name)}</button>`).join(", ")}</div>` : ""}
+    ${t.subgroups ? `<div class="filter-row"><button class="mini alt" id="btntree">
+      Ver árvore de grupos aninhados (${t.subgroups} subgrupos) →</button></div>` : ""}
+    <div class="filter-row">
+      <input id="fgrp" placeholder="Filtrar membro por nome…">
+      <span class="count-note" id="gcount"></span>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr><th>Membro</th><th class="col-via">Tipo</th></tr></thead>
+      <tbody id="gbody"></tbody>
+    </table></div>
+    ${capped ? `<div class="msg info">Mostrando ${shown} de ${t.members} membros — use o filtro para
+       encontrar alguém específico (a busca é feita no servidor, sobre a lista completa).</div>` : ""}
+    ${spInfo(d.queried_as)}`;
+
+  $("#back").onclick = () => renderOverview(state.overview);
+
+  const paintRows = (data) => {
+    const parts = [
+      ["Usuários", data.users, "usuário"],
+      ["Service principals", data.service_principals, "service principal"],
+      ["Subgrupos", data.subgroups, "grupo"],
+    ].filter(p => p[1].length);
+    $("#gcount").textContent = parts.length
+      ? parts.map(p => `${p[1].length} ${p[0].toLowerCase()}`).join(" · ")
+      : "nenhum membro encontrado";
+    $("#gbody").innerHTML = parts.map(([title, items, kind]) => `
+      <tr><td colspan="2" style="background:color-mix(in oklab,var(--s1) 5%,transparent);font-weight:600;font-size:12px">${title} (${items.length})</td></tr>
+      ${items.map(m => {
+        const label = m.display || m.principal || "";
+        // subgrupo abre o grupo; usuário/SP vira nova análise pelo userName resolvido
+        const attr = kind === "grupo" ? `data-sub="${esc(label)}"`
+                   : `data-user="${esc(m.principal || label)}"`;
+        const sub = kind !== "grupo" && m.principal && m.principal !== label
+          ? `<div class="hint" style="margin-top:2px">${esc(m.principal)}</div>` : "";
+        return `<tr>
+          <td><button class="linkish" ${attr}>${esc(label)}</button>${sub}</td>
+          <td class="col-via"><span class="pill ${kind === "grupo" ? "p-ind" : "p-direct"}">
+            <span class="dot" style="background:${kind === "grupo" ? "var(--crit)" : "var(--s1)"}"></span>${kind}</span></td>
+        </tr>`;
+      }).join("")}`).join("");
+
+    // membro clicavel: usuario vira nova analise; subgrupo abre o grupo
+    $("#gbody").querySelectorAll("[data-user]").forEach(b => b.onclick = () => analyzePrincipal(b.dataset.user));
+    $("#gbody").querySelectorAll("[data-sub]").forEach(b => b.onclick = () => openGroup(b.dataset.sub));
+  };
+  paintRows(d);
+  $("#pane").querySelectorAll(".hint [data-sub]").forEach(b => b.onclick = () => openGroup(b.dataset.sub));
+  if (t.subgroups) $("#btntree").onclick = () => openTree(name);
+
+  let gt;
+  $("#fgrp").oninput = e => {
+    clearTimeout(gt);
+    const q = e.target.value.trim();
+    gt = setTimeout(async () => {
+      try {
+        paintRows(await api(`/api/group/${encodeURIComponent(name)}/members?q=${encodeURIComponent(q)}`));
+      } catch (_) {}
+    }, 300);
+  };
+}
+
+// ---------- árvore de grupos aninhados ----------
+async function openTree(name) {
+  $("#pane").innerHTML = crumb(`${name} · árvore`)
+    + `<div class="msg info"><span class="spin"></span> Expandindo grupos aninhados…</div>`;
+  $("#back").onclick = () => openGroup(name);
+  try {
+    const t = await api(`/api/group/${encodeURIComponent(name)}/tree?depth=2`);
+    const node = (n, level) => {
+      const people = n.users + n.service_principals;
+      return `
+      <div class="treenode" style="margin-left:${level * 22}px">
+        <div class="treerow">
+          <span class="treeline">${level ? "└─" : ""}</span>
+          <button class="linkish" data-grp="${esc(n.name)}">${esc(n.name)}</button>
+          ${n.unresolved ? `<span class="pill p-inh">não visível</span>` : `
+            <span class="count-note">${people} membro(s) direto(s)${n.subgroup_count
+              ? ` · ${n.subgroup_count} subgrupo(s)` : ""}</span>`}
+        </div>
+        ${(n.children || []).map(c => node(c, level + 1)).join("")}
+        ${n.children_truncated ? `<div class="hint" style="margin-left:${(level+1)*22}px">
+          … e mais ${n.children_truncated} subgrupos (amostra de 25 por nível)</div>` : ""}
+      </div>`;
+    };
+    $("#pane").innerHTML = crumb(`${name} · árvore`) + `
+      <div class="msg info">Cada nível herda o acesso do grupo acima. Um privilégio dado ao
+        grupo raiz alcança <b>todo mundo</b> abaixo — é assim que acesso vaza sem ninguém notar.</div>
+      ${t.parents.length ? `<div class="hint" style="margin-bottom:10px">Acima de
+        <b>${esc(t.name)}</b>: ${t.parents.map(p => `<button class="linkish" data-grp="${esc(p.name)}">${esc(p.name)}</button>`).join(", ")}</div>` : ""}
+      <div class="treewrap">${node(t, 0)}</div>
+      ${spInfo(t.queried_as)}`;
+    $("#back").onclick = () => openGroup(name);
+    $("#pane").querySelectorAll("[data-grp]").forEach(b => b.onclick = () => openGroup(b.dataset.grp));
+  } catch (e) {
+    $("#pane").innerHTML = crumb(name) + `<div class="msg err">${esc(e.message)}</div>`;
+    $("#back").onclick = () => openGroup(name);
+  }
+}
+
+// ---------- impacto de remover uma tabela/view ----------
+async function openTableImpact(fullName) {
+  $("#pane").innerHTML = crumb(`${fullName} · impacto`)
+    + `<div class="msg info"><span class="spin"></span> Consultando linhagem dos últimos 90 dias…</div>`;
+  $("#back").onclick = () => renderOverview(state.overview);
+  try {
+    const d = await api(`/api/object/impact?full_name=${encodeURIComponent(fullName)}&days=90`);
+    const riskCls = { alto: "p-ind", "médio": "p-inh", baixo: "p-own" }[d.risk] || "p-own";
+    const riskColor = { alto: "var(--crit)", "médio": "var(--warn)", baixo: "var(--s3)" }[d.risk];
+    const tbl = (rows, headers, rowFn) => rows.length
+      ? `<div class="scroll" style="max-height:240px"><table><thead><tr>${headers}</tr></thead>
+         <tbody>${rows.map(rowFn).join("")}</tbody></table></div>`
+      : `<div class="hint">Nada registrado na janela.</div>`;
+
+    $("#pane").innerHTML = crumb(`${fullName} · impacto`) + `
+      <div class="msg ${d.risk === "baixo" ? "info" : "warnbox"}">
+        <span class="pill ${riskCls}"><span class="dot" style="background:${riskColor}"></span>risco ${esc(d.risk)}</span>
+        &nbsp;${esc(d.verdict)}
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="k">Objetos derivados</div><div class="v">${d.downstream.length}</div></div>
+        <div class="tile"><div class="k">Jobs / notebooks / dashboards</div><div class="v">${d.consumers.length}</div></div>
+        <div class="tile"><div class="k">Fontes de origem</div><div class="v">${d.upstream.length}</div></div>
+      </div>
+      <h3 class="secttl">Quebra se você apagar (a jusante)</h3>
+      ${tbl(d.downstream,
+        `<th>Objeto derivado</th><th class="col-type">Tipo</th><th class="col-priv">Eventos</th>`,
+        r => `<tr><td class="obj">${esc(r.object)}</td><td>${esc(r.type)}</td>
+               <td style="font-variant-numeric:tabular-nums">${esc(r.events)}</td></tr>`)}
+      <h3 class="secttl">Quem lê este objeto</h3>
+      ${tbl(d.consumers,
+        `<th class="col-type">Tipo</th><th>ID da entidade</th><th class="col-priv">Eventos</th><th class="col-lvl">Último</th>`,
+        r => `<tr><td>${esc(r.entity_type)}</td><td class="obj">${esc(r.entity_id)}</td>
+               <td style="font-variant-numeric:tabular-nums">${esc(r.events)}</td><td>${esc(r.last)}</td></tr>`)}
+      <div class="hint">Linhagem cobre apenas o que <b>executou</b> nos últimos 90 dias. Um job
+        mensal que não rodou na janela não aparece — ausência aqui não é prova de que nada depende.</div>
+      ${spInfo(d.queried_as)}`;
+    $("#back").onclick = () => renderOverview(state.overview);
+  } catch (e) {
+    $("#pane").innerHTML = crumb(fullName) + `<div class="msg err">${esc(e.message)}</div>`;
+    $("#back").onclick = () => renderOverview(state.overview);
+  }
+}
+
+// Analisar outro principal a partir de um clique (usuario dentro de um grupo).
+function analyzePrincipal(p) {
+  $("#principal").value = p;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  $("#run").click();
+}
+
+// ---------- nível 2 ----------
+function crumb(label) {
+  return `<div class="crumb">
+    <button id="back">← todos os containers</button><span>/</span><span><b>${esc(label)}</b></span>
+  </div>`;
+}
+function detailTable(items, headers, rowFn, note, queried, bindRows) {
+  if (!items.length) return crumbWrap(`<div class="empty">Nenhuma permissão encontrada aqui.</div>`, note, queried);
+  const body = `
+    <div class="filter-row">
+      <input id="fdet" placeholder="Filtrar por objeto ou privilégio…">
+      <span class="count-note" id="dcount"></span>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr>${headers}</tr></thead><tbody id="dbody"></tbody>
+    </table></div>`;
+  return crumbWrap(body, note, queried, () => {
+    const draw = (q = "") => {
+      const ql = q.toLowerCase();
+      const list = items.filter(i => !ql
+        || (i.object || "").toLowerCase().includes(ql)
+        || (i.privilege || i.permission || "").toLowerCase().includes(ql)
+        || (i.securable_type || i.object_type || "").toLowerCase().includes(ql));
+      $("#dcount").textContent = `${list.length} de ${items.length} linhas`;
+      $("#dbody").innerHTML = list.map(rowFn).join("");
+      if (bindRows) bindRows();   // re-liga os handlers depois de cada redraw
+    };
+    draw();
+    $("#fdet").oninput = e => draw(e.target.value);
+  });
+}
+function crumbWrap(inner, note, queried, after) {
+  return { inner, note, queried, after };
+}
+function paint(label, built) {
+  $("#pane").innerHTML = crumb(label) + built.inner
+    + (built.note ? `<div class="hint">${esc(built.note)}</div>` : "")
+    + spInfo(built.queried);
+  $("#back").onclick = () => renderOverview(state.overview);
+  if (built.after) built.after();
+}
+
+async function openCatalog(cat) {
+  $("#pane").innerHTML = crumb(cat) + `<div class="msg info"><span class="spin"></span> Consultando privilégios nos assets de <b>${esc(cat)}</b>…</div>`;
+  $("#back").onclick = () => renderOverview(state.overview);
+  try {
+    const d = await api(`/api/catalog/${encodeURIComponent(cat)}?principal=${encodeURIComponent(state.principal)}`);
+    paint(cat, detailTable(
+      d.items,
+      `<th class="col-type">Tipo</th><th>Objeto</th><th class="col-priv">Privilégio</th><th class="col-lvl">Origem do grant</th><th class="col-via">Chega por</th>`,
+      r => `<tr><td>${esc(r.securable_type)}</td>
+             <td class="obj">${["TABLE","VOLUME"].includes(r.securable_type)
+                 ? `<button class="linkish" data-impact="${esc(r.object)}" title="Ver impacto de remover">${esc(r.object)}</button>`
+                 : esc(r.object)}</td>
+             <td>${esc(r.privilege)}</td><td>${lvlPill(r.grant_level)}</td><td>${viaPill(r)}</td></tr>`,
+      d.truncated ? "Resultado truncado em 5.000 linhas." : "",
+      d.queried_as,
+      () => $("#dbody").querySelectorAll("[data-impact]").forEach(b =>
+        b.onclick = () => openTableImpact(b.dataset.impact))));
+  } catch (e) {
+    paint(cat, crumbWrap(`<div class="msg err">${esc(e.message)}</div>`));
+  }
+}
+
+async function openResource(key) {
+  const label = state.overview.resource_types.find(t => t.key === key)?.label || key;
+  $("#pane").innerHTML = crumb(label) + `<div class="msg info"><span class="spin"></span> Varrendo permissões de <b>${esc(label)}</b> objeto por objeto…</div>`;
+  $("#back").onclick = () => renderOverview(state.overview);
+  try {
+    const d = await api(`/api/resource/${encodeURIComponent(key)}?principal=${encodeURIComponent(state.principal)}`);
+    paint(label, detailTable(
+      d.items,
+      `<th class="col-type">Tipo</th><th>Objeto</th><th class="col-priv">Permissão</th><th class="col-lvl">Origem</th><th class="col-via">Chega por</th>`,
+      r => `<tr><td>${esc(r.object_type)}</td><td>${esc(r.object)}</td>
+             <td>${esc(r.permission)}</td><td>${lvlPill(r.grant_level)}</td><td>${viaPill(r)}</td></tr>`,
+      `Varridos ${d.objects_scanned} de ${d.objects_total} objetos deste tipo — a Permissions API responde por objeto, não por usuário.`,
+      d.queried_as));
+  } catch (e) {
+    paint(label, crumbWrap(`<div class="msg err">${esc(e.message)}</div>`));
+  }
+}
+
+// ---------- disparo ----------
+$("#run").onclick = async () => {
+  const p = $("#principal").value.trim();
+  if (!p) { $("#out").innerHTML = `<div class="msg err">Informe um usuário ou grupo.</div>`; return; }
+  state.principal = p;
+  const btn = $("#run");
+  btn.disabled = true;
+  $("#out").innerHTML = `<div class="msg info"><span class="spin"></span> Montando o resumo de acessos de <b>${esc(p)}</b>…</div>`;
+  try {
+    renderOverview(await api(`/api/overview?principal=${encodeURIComponent(p)}`));
+  } catch (e) {
+    $("#out").innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ---------- Genie chat ----------
+const genie = { conv: null, disc: false };
+const GENIE_SAMPLES = [
+  "Quais GRANTs foram concedidos nos últimos 30 dias e por quem?",
+  "Quais os 10 principais consumidores de DBU no último mês?",
+  "Quais tabelas não são consultadas há mais de 90 dias?",
+  "Quem acessou dados fora do horário comercial na última semana?",
+];
+
+(async () => {
+  try {
+    const c = await api("/api/genie/config");
+    if (c.enabled) $("#geniebtn").hidden = false;
+  } catch (_) {}
+})();
+
+$("#geniebtn").onclick = () => {
+  $("#genie").hidden = false;
+  const chips = $("#geniechips");
+  if (chips && !chips.dataset.built) {
+    chips.innerHTML = GENIE_SAMPLES.map(q => `<button class="genie-chip">${esc(q)}</button>`).join("");
+    chips.querySelectorAll(".genie-chip").forEach(b => b.onclick = () => askGenie(b.textContent));
+    chips.dataset.built = "1";
+  }
+  setTimeout(() => $("#genieinput").focus(), 50);
+};
+$("#genieclose").onclick = () => { $("#genie").hidden = true; };
+$("#genie").onclick = e => { if (e.target.id === "genie") $("#genie").hidden = true; };
+
+function genieBubble(cls, html) {
+  const div = document.createElement("div");
+  div.className = `bubble ${cls}`;
+  div.innerHTML = html;
+  $("#geniebody").appendChild(div);
+  $("#geniebody").scrollTop = $("#geniebody").scrollHeight;
+  return div;
+}
+
+async function askGenie(q) {
+  const question = (q || $("#genieinput").value).trim();
+  if (!question) return;
+  $("#genieinput").value = "";
+  $("#geniesend").disabled = true;
+  genieBubble("user", esc(question));
+  const thinking = genieBubble("ai", `<span class="spin"></span> consultando as system tables…`);
+  try {
+    const r = await fetch("/api/genie/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: question, conversation_id: genie.conv }),
+    });
+    if (!r.ok) {
+      let m = await r.text(); try { m = JSON.parse(m).detail || m; } catch (_) {}
+      throw new Error(m.slice(0, 300));
+    }
+    const d = await r.json();
+    genie.conv = d.conversation_id || genie.conv;
+    let html = d.text ? esc(d.text) : "";
+    if (d.sql) html += `<pre>${esc(d.sql)}</pre>`;
+    if (d.table && d.table.columns.length) {
+      html += `<div class="scroll"><table><thead><tr>`
+        + d.table.columns.map(c => `<th>${esc(c)}</th>`).join("")
+        + `</tr></thead><tbody>`
+        + d.table.rows.map(row => `<tr>${row.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")
+        + `</tbody></table></div>`
+        + (d.table.truncated ? `<div class="hint">Mostrando 100 primeiras linhas.</div>` : "");
+    }
+    thinking.innerHTML = html || "(sem resposta)";
+    if (!genie.disc && (d.queried_as || "").includes("service principal")) {
+      $("#geniedisc").innerHTML = "As respostas usam o <b>service principal do app</b> "
+        + "(a Genie API não tem escopo OBO), então refletem o acesso do SP, não o seu.";
+      genie.disc = true;
+    }
+  } catch (e) {
+    thinking.className = "bubble ai";
+    thinking.innerHTML = `<span style="color:var(--crit)">${esc(e.message)}</span>`;
+  } finally {
+    $("#geniesend").disabled = false;
+    $("#geniebody").scrollTop = $("#geniebody").scrollHeight;
+  }
+}
+$("#geniesend").onclick = () => askGenie();
+$("#genieinput").addEventListener("keydown", e => { if (e.key === "Enter") askGenie(); });
+</script>
+</body>
+</html>

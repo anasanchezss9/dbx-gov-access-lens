@@ -1,0 +1,8 @@
+command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+env:
+  # Preenchidos pelo setup/setup.py. Deixe em branco aqui.
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: ""
+  - name: GENIE_SPACE_ID
+    value: ""

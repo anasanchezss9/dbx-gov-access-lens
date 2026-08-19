@@ -1,0 +1,26 @@
+# Databricks Asset Bundle — acelerador Access Lens.
+#
+# Deploy no ambiente do cliente:
+#   databricks bundle validate
+#   databricks bundle deploy          # cria/atualiza o App
+#   databricks bundle run access_lens # inicia o App
+#
+# O warehouse e o Genie Space são configurados pelo setup/setup.py, que grava os env vars
+# em src/app.yaml. Rode o setup antes do deploy (ou depois, seguido de novo deploy).
+
+bundle:
+  name: access-lens
+
+include:
+  - resources/*.yml
+
+targets:
+  # Alvo único e simples: o cliente aponta o profile da CLI para o workspace dele.
+  # Renomeie / duplique se quiser dev+prod.
+  default:
+    default: true
+    mode: development
+    # Sem bloco workspace: o bundle usa o profile ativo da CLI (databricks auth login)
+    # ou a variável DATABRICKS_HOST. Para fixar, adicione:
+    #   workspace:
+    #     host: https://<workspace>.cloud.databricks.com
