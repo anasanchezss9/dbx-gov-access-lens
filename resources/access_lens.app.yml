@@ -5,4 +5,4 @@ resources:
       description: "Access Lens — governança de acessos com rastreabilidade de origem."
       # Aponta para o diretório do app. Os env vars (warehouse, Genie) vivem em src/app.yaml,
       # preenchidos pelo setup/setup.py — não aqui.
-      source_code_path: src
+      source_code_path: ../src

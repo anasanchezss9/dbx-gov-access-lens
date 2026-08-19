@@ -6,3 +6,6 @@ __pycache__/
 *.egg-info/
 dist/
 .DS_Store
+
+# Artefato local do setup manual — nao versionar
+setup/genie_space.json

@@ -7,28 +7,28 @@
 <style>
   :root {
     color-scheme: light;
-    --surface-1: #fcfcfb;
-    --page: #f9f9f7;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --grid: #e1e0d9;
-    --axis: #c3c2b7;
-    --border: rgba(11,11,11,0.10);
-    --s1: #2a78d6;
-    --s2: #eb6834;
-    --s3: #1baf7a;
-    --warn: #fab219;
-    --crit: #d03b3b;
+    --surface-1: #ffffff;
+    --page: #f4f6f9;
+    --ink: #111827;
+    --ink-2: #4b5563;
+    --muted: #8a94a6;
+    --grid: #e6eaf0;
+    --axis: #cbd3df;
+    --border: rgba(17,24,39,0.09);
+    --s1: #1d4ed8;
+    --s2: #0f766e;
+    --s3: #2563a8;
+    --warn: #b45309;
+    --crit: #b91c1c;
     --radius: 10px;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
       color-scheme: dark;
-      --surface-1: #1a1a19; --page: #0d0d0d; --ink: #fff; --ink-2: #c3c2b7;
-      --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+      --surface-1: #161b22; --page: #0d1117; --ink: #e6edf3; --ink-2: #9aa5b1;
+      --muted: #6e7681; --grid: #21262d; --axis: #30363d;
       --border: rgba(255,255,255,0.10);
-      --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+      --s1: #4a90e2; --s2: #2dd4bf; --s3: #6ea8de; --warn: #d99a2b; --crit: #e5534b;
     }
   }
   :root[data-theme="dark"] {
@@ -49,16 +49,30 @@
   header {
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--surface-1);
+    border-top: 3px solid var(--s1);
   }
-  h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
-  .tagline { color: var(--ink-2); font-size: 13px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.015em; }
+  .tagline {
+    color: var(--ink-2); font-size: 13px; padding-left: 14px;
+    border-left: 1px solid var(--grid);
+  }
   .spacer { margin-left: auto; }
   .btn {
+    display: inline-flex; align-items: center; gap: 6px;
     font: inherit; font-size: 12.5px; padding: 6px 12px; cursor: pointer;
     border: 1px solid var(--axis); border-radius: 7px;
     background: var(--surface-1); color: var(--ink-2);
+    transition: border-color .12s, color .12s, background .12s;
   }
-  .btn:hover { color: var(--ink); }
+  .btn:hover { color: var(--ink); border-color: var(--ink-2); }
+  .btn-accent {
+    border-color: color-mix(in oklab, var(--s1) 45%, var(--axis));
+    color: var(--s1); font-weight: 550;
+    background: color-mix(in oklab, var(--s1) 7%, var(--surface-1));
+  }
+  .btn-accent:hover {
+    color: #fff; background: var(--s1); border-color: var(--s1);
+  }
 
   main { padding: 22px 28px 70px; max-width: 1360px; margin: 0 auto; }
 
@@ -249,9 +263,11 @@
   /* ---------- Genie chat ---------- */
   .genie-overlay {
     position: fixed; inset: 0; z-index: 50;
-    background: color-mix(in oklab, var(--ink) 32%, transparent);
+    background: color-mix(in oklab, var(--ink) 42%, transparent);
+    backdrop-filter: blur(1px);
     display: flex; justify-content: flex-end;
   }
+  .genie-overlay[hidden] { display: none; }
   .genie-panel {
     width: min(560px, 100%); height: 100%; background: var(--page);
     border-left: 1px solid var(--border); display: flex; flex-direction: column;
@@ -259,10 +275,25 @@
   }
   .genie-head {
     display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px;
-    border-bottom: 1px solid var(--border); background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, color-mix(in oklab, var(--s1) 8%, var(--surface-1)), var(--surface-1));
   }
-  .genie-head .btn { margin-left: auto; }
-  .genie-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+  .genie-head-txt { min-width: 0; }
+  .genie-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink);
+  }
+  .genie-title svg { color: var(--s1); flex: none; }
+  .genie-x {
+    margin-left: auto; flex: none; display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; padding: 0; cursor: pointer; color: var(--ink-2);
+    background: var(--surface-1); border: 1px solid var(--axis); border-radius: 8px;
+    transition: color .12s, background .12s, border-color .12s;
+  }
+  .genie-x:hover {
+    color: var(--crit); border-color: color-mix(in oklab, var(--crit) 45%, var(--axis));
+    background: color-mix(in oklab, var(--crit) 8%, var(--surface-1));
+  }
   .genie-body { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
   .genie-intro p { margin: 0 0 10px; color: var(--ink-2); font-size: 13px; }
   .genie-chips { display: flex; flex-direction: column; gap: 8px; }
@@ -306,8 +337,11 @@
   <h1>Access Lens</h1>
   <span class="tagline">Governança de acessos com rastreabilidade de origem</span>
   <span class="spacer"></span>
-  <button class="btn" id="geniebtn" hidden>✨ Perguntar à IA</button>
-  <button class="btn" id="theme">◐ tema</button>
+  <button class="btn btn-accent" id="geniebtn" hidden>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5.9 1.1 1 1.8h6c.1-.7.4-1.3 1-1.8A7 7 0 0 0 12 2Z"/></svg>
+    Assistente
+  </button>
+  <button class="btn" id="theme">Tema</button>
 </header>
 
 <main>
@@ -341,15 +375,20 @@
 <div id="genie" class="genie-overlay" hidden>
   <div class="genie-panel">
     <div class="genie-head">
-      <div>
-        <div class="genie-title">✨ Perguntar à IA sobre acessos e ambiente</div>
-        <div class="hint">Sala do Genie sobre as system tables — audit, linhagem, consumo e privilégios.</div>
+      <div class="genie-head-txt">
+        <div class="genie-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5.9 1.1 1 1.8h6c.1-.7.4-1.3 1-1.8A7 7 0 0 0 12 2Z"/></svg>
+          Assistente de governança
+        </div>
+        <div class="hint">Consulta as system tables — auditoria, linhagem, consumo e privilégios.</div>
       </div>
-      <button class="btn" id="genieclose">✕</button>
+      <button class="genie-x" id="genieclose" aria-label="Fechar assistente" title="Fechar (Esc)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
     </div>
     <div class="genie-body" id="geniebody">
       <div class="genie-intro">
-        <p>Pergunte em linguagem natural o que o app ainda não traz em tela. Exemplos:</p>
+        <p>Pergunte em linguagem natural sobre acessos, consumo e linhagem. Sugestões:</p>
         <div class="genie-chips" id="geniechips"></div>
       </div>
     </div>
@@ -1008,8 +1047,10 @@ $("#geniebtn").onclick = () => {
   }
   setTimeout(() => $("#genieinput").focus(), 50);
 };
-$("#genieclose").onclick = () => { $("#genie").hidden = true; };
-$("#genie").onclick = e => { if (e.target.id === "genie") $("#genie").hidden = true; };
+function closeGenie() { $("#genie").hidden = true; }
+$("#genieclose").onclick = closeGenie;
+$("#genie").onclick = e => { if (e.target.id === "genie") closeGenie(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#genie").hidden) closeGenie(); });
 
 function genieBubble(cls, html) {
   const div = document.createElement("div");
