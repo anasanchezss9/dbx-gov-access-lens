@@ -145,6 +145,46 @@ Pronto. O app está no ar, no seu ambiente, lendo os seus dados ao vivo.
 
 ---
 
+## Modo alternativo — publicar pela interface, sem CLI (Git + Resources)
+
+Se você **não tem a Databricks CLI** (ou está numa rede que bloqueia a instalação de
+dependências), dá para publicar o app inteiramente pela **interface do workspace**, apontando
+direto para este repositório Git. Não precisa de CLI, Terraform nem SDK.
+
+> **Escolha um caminho só.** Use *ou* o fluxo por bundle (acima) *ou* este fluxo pela
+> interface — não os dois no mesmo app. Um app gerenciado por bundle e pela UI ao mesmo tempo
+> gera conflito de estado.
+
+**Passo a passo:**
+
+1. No workspace, vá em **Compute → Apps → Create app** (ou abra um app existente e clique em
+   **Edit**).
+2. Em **Git repository URL**, cole a URL deste repositório; em **Git provider**, selecione
+   **GitHub**. O Databricks passa a puxar o código direto do repositório — a cada novo push,
+   basta clicar em **Deploy** para publicar a versão nova.
+3. Em **Resources → Add resource**, adicione o seu **SQL Warehouse**. Ao declará-lo como
+   resource, o Databricks concede a permissão ao service principal do app e injeta o ID
+   automaticamente — você **não** precisa preencher `DATABRICKS_WAREHOUSE_ID` no `app.yaml`
+   à mão.
+4. **Sala do Genie (opcional):** para habilitar a aba de assistente, defina o env var
+   `GENIE_SPACE_ID` na configuração do app com o ID de uma sala do Genie sobre as system
+   tables. Você pode criar essa sala pela interface do Genie ou via
+   `databricks genie create-space` (a CLI da Databricks é um binário único, não depende de
+   pacotes Python). Sem esse ID, a aba de assistente simplesmente não aparece.
+5. Clique em **Deploy** e aguarde o compute ficar pronto.
+
+**Trade-offs deste modo:**
+
+| | Bundle + `setup.py` (recomendado) | Git + interface |
+|---|---|---|
+| Requisitos locais | Databricks CLI (+ SDK para o setup) | Nenhum — tudo no navegador |
+| Configuração | versionada em código (`app.yaml`, bundle) | vive na interface, fora do repositório |
+| Reprodutível / "clone e rode" | sim | parcial — a config não viaja no Git |
+| Warehouse | env var em `app.yaml` | declarado como resource (permissão automática) |
+| Melhor para | entregar como acelerador reproduzível | iterar rápido, quem não tem CLI |
+
+---
+
 ## Configuração (variáveis de ambiente)
 
 Ficam no arquivo `src/app.yaml` e são preenchidas pelo script de setup. Você raramente
