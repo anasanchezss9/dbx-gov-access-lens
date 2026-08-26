@@ -84,6 +84,46 @@ Antes de começar, você precisa de:
 > autenticada**. Não há nenhum link, ID ou credencial de outro ambiente embutido neste
 > pacote. Confirme onde você está logado com: `databricks auth describe`
 
+### Permissões do service principal do app — leia com atenção
+
+O app roda com a identidade de um **service principal (SP)** criado automaticamente pela
+plataforma Databricks Apps. Esse SP precisa de **três coisas distintas** — e a falta de
+qualquer uma delas faz o app aparecer **vazio, sem mensagem de erro**, o que é a causa mais
+comum de "não aparece nada". Ser admin do workspace **não** é suficiente sozinho.
+
+| # | Permissão | Concede o quê | O que fica vazio sem ela |
+|---|---|---|---|
+| 1 | **Workspace admin** (membro do grupo `admins`) | SCIM, Permissions API, `SHOW GROUPS WITH USER` | A coluna "chega por", os membros de grupo e a árvore de grupos aninhados |
+| 2 | **`SELECT` nos schemas de sistema** — `system.access`, `system.billing`, `system.query`, `system.compute`, `system.information_schema` | As consultas de privilégios, uso, linhagem e a lista de workspaces | **A aba Unity Catalog inteira e os tiles de impacto** |
+| 3 | **Leitura dos objetos de UC que você quer auditar** — idealmente **metastore admin**, ou no mínimo `USE CATALOG` + `USE SCHEMA` nos catálogos-alvo | As views `information_schema.*_privileges` **só retornam as linhas que o próprio SP tem permissão de enxergar** | **Os privilégios de qualquer catálogo onde o SP não tenha acesso** (aparece "0 privilégios") |
+
+**O item 3 é o que mais engana.** As views de privilégios do Unity Catalog não são globais:
+elas mostram apenas os grants sobre objetos que o *caller* já pode ver. Um SP que é workspace
+admin mas **não** tem acesso aos catálogos verá **grupos normalmente** (item 1) e, ao mesmo
+tempo, **zero privilégios de tabela** — exatamente o sintoma de "vejo os grupos do usuário,
+mas nenhuma tabela ou privilégio".
+
+**Recomendação:** para uma ferramenta de revisão de acesso, o SP deve ser **metastore admin**.
+Com isso, as views de `information_schema` passam a enxergar os grants de todo o metastore, que
+é o comportamento esperado de um console de governança. Como conceder (rode como metastore
+admin ou account admin):
+
+```sql
+-- 1. acesso de leitura aos schemas de sistema (habilite os system schemas antes, se preciso)
+GRANT SELECT ON SCHEMA system.access             TO `<client-id-do-SP>`;
+GRANT SELECT ON SCHEMA system.billing            TO `<client-id-do-SP>`;
+GRANT SELECT ON SCHEMA system.query              TO `<client-id-do-SP>`;
+GRANT SELECT ON SCHEMA system.compute            TO `<client-id-do-SP>`;
+GRANT SELECT ON SCHEMA system.information_schema TO `<client-id-do-SP>`;
+
+-- 2. leitura ampla dos catálogos a auditar (repita por catálogo, ou torne o SP metastore admin)
+GRANT USE CATALOG ON CATALOG <catalogo> TO `<client-id-do-SP>`;
+GRANT USE SCHEMA  ON CATALOG <catalogo> TO `<client-id-do-SP>`;
+```
+
+> O `<client-id-do-SP>` é impresso pelo `setup/setup.py` (linha "SP do app: …"). Você também
+> o encontra em *Settings → Identity and access → Service principals* no workspace.
+
 ---
 
 ## Passo a passo do deploy
@@ -231,7 +271,8 @@ setup adiciona o service principal do aplicativo ao grupo `admins`. É uma decis
 de governança — vale documentá-la internamente.
 
 Além do admin, o service principal precisa de acesso de leitura aos objetos que você quer
-inspecionar: `USE CATALOG` / `USE SCHEMA` nos catálogos e `CAN USE` no warehouse.
+inspecionar: `USE CATALOG` / `USE SCHEMA` nos catálogos e `CAN USE` no warehouse. Os detalhes
+completos estão em *Permissões do service principal do app*, na seção de pré-requisitos.
 
 ---
 
@@ -258,7 +299,9 @@ próprio app). Em resumo:
 
 | Sintoma | Causa provável e solução |
 |---|---|
-| A coluna "chega por" ou os membros de grupo vêm vazios | O service principal não é admin. Rode o setup de novo (ou peça a um admin) e depois `databricks bundle deploy`. |
+| A coluna "chega por" ou os membros de grupo vêm vazios, **mas os privilégios de UC aparecem** | O service principal **não é admin do workspace**. Rode o setup de novo (ou peça a um admin) e depois `databricks bundle deploy`. |
+| **Os grupos do usuário aparecem, mas a aba Unity Catalog mostra "0 privilégios"** (para vários usuários/grupos) | O service principal **é admin, mas não tem acesso de leitura aos catálogos**. As views de privilégios só mostram o que o SP pode ver. Torne o SP **metastore admin**, ou conceda `USE CATALOG` + `USE SCHEMA` nos catálogos-alvo. Veja *Permissões do service principal do app*. |
+| A aba Unity Catalog **inteira** vem vazia, para qualquer principal | O service principal não tem `SELECT` nos schemas de sistema (`system.information_schema`, `system.access`). Conceda os grants da tabela de pré-requisitos. |
 | "DATABRICKS_WAREHOUSE_ID não configurado" | Rode o setup, ou preencha o warehouse em `src/app.yaml`. |
 | A aba "Perguntar à IA" não aparece | `GENIE_SPACE_ID` está vazio. Rode o setup sem `--skip-genie`, ou informe uma sala com `--genie-space-id`. |
 | Erro de autenticação ao rodar o setup ou a CLI | Refaça o `databricks auth login` apontando para o seu workspace. Confirme com `databricks auth describe`. |
