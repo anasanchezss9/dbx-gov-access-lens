@@ -296,10 +296,21 @@ def workspaces(request: Request):
     o workspace atual. Os privilegios de UC, ao contrario, sao do metastore e valem pra
     todos os workspaces que o compartilham.
     """
-    current = ""
+    # Na AWS e no GCP o host não traz o id do workspace (só o adb-<id> do Azure traz).
+    current = os.getenv("DATABRICKS_WORKSPACE_ID", "")
     host = _host()
-    if "adb-" in host:
+    if not current and "adb-" in host:
         current = host.split("adb-")[1].split(".")[0]
+    if not current:
+        try:
+            resp = requests.get(
+                f"{host}/api/2.0/preview/scim/v2/Me",
+                headers={"Authorization": f"Bearer {_token(request)}"},
+                timeout=15,
+            )
+            current = resp.headers.get("x-databricks-org-id", "")
+        except (requests.RequestException, HTTPException):
+            pass
 
     items: list[dict[str, Any]] = []
     try:

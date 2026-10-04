@@ -115,11 +115,11 @@ def ensure_admin(w: WorkspaceClient, app_name: str, skip: bool) -> None:
         if str(sp_id) in members:
             _log("Já é admin. Nada a fazer.")
             return
-        from databricks.sdk.service.iam import Patch, PatchOp, ComplexValue
+        from databricks.sdk.service.iam import Patch, PatchOp, PatchSchema
         w.groups.patch(
             admins.id,
-            operations=[Patch(op=PatchOp.ADD, path="members",
-                              value=[ComplexValue(value=str(sp_id)).as_dict()])],
+            operations=[Patch(op=PatchOp.ADD, path="members", value=[{"value": str(sp_id)}])],
+            schemas=[PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],
         )
         _log("SP adicionado ao grupo 'admins'. IMPORTANTE: faça redeploy do app "
              "(o token do SP só renova o admin no restart).")
@@ -138,7 +138,7 @@ def provision_genie(w: WorkspaceClient, warehouse_id: str) -> str | None:
             title="Access Lens — Governança",
             description="Perguntas em linguagem natural sobre acessos, consumo e linhagem "
                         "usando as system tables do Databricks.",
-            serialized_space=_serialized_space(),
+            serialized_space=_serialized_space(str(w.get_workspace_id())),
         )
         _log(f"Genie Space criada: {space.space_id}")
         return space.space_id
@@ -149,7 +149,7 @@ def provision_genie(w: WorkspaceClient, warehouse_id: str) -> str | None:
         return None
 
 
-def _serialized_space() -> str:
+def _serialized_space(workspace_id: str) -> str:
     """
     Monta o serialized_space. Gotchas validados (custaram debug):
       - data_sources.tables ordenado por identifier;
@@ -164,7 +164,15 @@ def _serialized_space() -> str:
         "config": {"sample_questions": qs},
         "data_sources": {"tables": [{"identifier": t} for t in GENIE_TABLES]},
         "instructions": {
-            "text_instructions": [{"id": uuid.uuid4().hex, "content": GENIE_INSTRUCTIONS}]
+            "text_instructions": [{
+                "id": uuid.uuid4().hex,
+                "content": GENIE_INSTRUCTIONS + [
+                    f"O workspace atual, onde o Access Lens está publicado, tem workspace_id = "
+                    f"{workspace_id}. As system tables trazem dados de todos os workspaces da "
+                    "conta: quando a pergunta disser 'neste workspace' ou não citar outro "
+                    f"workspace, filtre por workspace_id = '{workspace_id}' e diga isso na resposta.",
+                ],
+            }]
         },
         "benchmarks": {"questions": []},
     }

@@ -6,3 +6,6 @@ resources:
       # Aponta para o diretório do app. Os env vars (warehouse, Genie) vivem em src/app.yaml,
       # preenchidos pelo setup/setup.py — não aqui.
       source_code_path: ../src
+      # Consentimento OBO: as consultas de UC rodam com a identidade de quem abre o app.
+      user_api_scopes:
+        - sql
